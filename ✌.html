@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Üzeyir - Doğum Günü</title>
+  <style>
+    :root{--bg:#0f172a;--card:#0b1220;--accent:#ffb86b;--text:#fff}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#071020 0%, #0f1830 100%);color:var(--text)}
+    .wrap{width:100%;max-width:980px;padding:28px}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:28px;border-radius:18px;box-shadow:0 10px 30px rgba(2,6,23,0.6)}
+    h1{font-size:36px;margin:0 0 10px}
+    p.lead{margin:0 0 18px;opacity:0.9}
+
+    /* Cake */
+    .stage{display:flex;gap:20px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+    .cake{position:relative;width:480px;height:320px;display:flex;align-items:center;justify-content:center}
+    .cake .tier{position:absolute;background:#ffe6c8;border-radius:18px;width:360px;height:160px;bottom:50px;box-shadow:inset 0 -6px 0 rgba(0,0,0,0.06)}
+    .cake .tier.small{width:260px;height:110px;bottom:120px}
+    .cake .frosting{position:absolute;bottom:calc(50px + 120px);width:380px;height:40px;border-radius:20px;background:linear-gradient(90deg,#ffe0b8,#ffd2a0);left:50%;transform:translateX(-50%)}
+
+    /* Candles */
+    .candles{position:absolute;top:18%;left:50%;transform:translateX(-50%);display:flex;gap:12px}
+    .candle{width:16px;height:64px;background:linear-gradient(180deg,#fff,#fffbf2);border-radius:4px;position:relative;display:flex;align-items:flex-start;justify-content:center;cursor:pointer}
+    .candle::before{content:'';position:absolute;inset:0;border-radius:4px;box-shadow:inset 0 -6px 0 rgba(0,0,0,0.03)}
+    .flame{position:absolute;top:-18px;width:14px;height:20px;border-radius:50% 50% 40% 40%/60% 60% 40% 40%;transform-origin:center bottom;animation:flicker 160ms infinite;filter:drop-shadow(0 6px 6px rgba(255,120,60,0.12));display:flex;align-items:center;justify-content:center}
+    .flame .inner{width:8px;height:12px;border-radius:50%;background:linear-gradient(180deg,#ffd36b,#ff7a3d)}
+    .flame .outer{position:absolute;width:12px;height:16px;border-radius:50%;background:linear-gradient(180deg,#fff1a8,#ffd36b);opacity:0.95}
+    .flame.out{opacity:0;transform:scale(0.2);transition:all 300ms ease}
+
+    @keyframes flicker{0%{transform:translateY(0) scaleY(1)}50%{transform:translateY(-2px) scaleY(1.06)}100%{transform:translateY(0) scaleY(1)}}
+
+    /* Controls */
+    .controls{display:flex;flex-direction:column;gap:10px;min-width:260px}
+    .btn{background:var(--accent);border:none;padding:10px 14px;border-radius:10px;font-weight:600;cursor:pointer}
+    .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text)}
+    .status{font-size:13px;opacity:0.9}
+
+    /* Celebration */
+    #confetti{position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:999}
+    .message{margin-top:18px;padding:14px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);display:inline-block}
+
+    footer{margin-top:18px;font-size:13px;opacity:0.8}
+
+    @media(max-width:820px){.cake{width:340px;height:260px}.controls{min-width:unset;width:100%}.stage{flex-direction:column;align-items:center}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Üzeyir, İyi ki Doğdun✌ bu arada kürdistan yok </h1>
+      <p class="lead">Mumlara tıklayarak şeh saidin ölümünü kutlayabilirsin. Müzik eklemek için aynı klasöre <code>iyi-ki-dogdun.mp3</code> dosyasını koy.</p>
+
+      <div class="stage">
+        <div class="cake" aria-hidden>
+          <div class="tier small"></div>
+          <div class="frosting"></div>
+          <div class="tier"></div>
+
+          <div class="candles" id="candles"></div>
+        </div>
+
+        <div class="controls">
+          <button class="btn" id="playBtn">🎵 Müzik Başlat / Duraklat</button>
+          <button class="btn secondary" id="micBtn">🎤 Mikrofonla Üfle: Kapalı</button>
+          <div class="status" id="status">Durum: Mumlar açık</div>
+          <div class="message" id="greeting">🎂 Üzeyirşengüllü'ye özel: <strong>İyi ki doğdun, Üzeyir ✌!</strong></div>
+          <footer>Dosyayı index.html olarak kaydet, aynı klasöre şarkıyı ekle ve tarayıcıda aç.</footer>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <canvas id="confetti"></canvas>
+
+  <!-- Kullanıcı kendi 'İyi ki doğdun' mp3'ünü koymalı. Telifli içerik sağlanmamaktadır. -->
+  <audio id="song" src="iyi-ki-dogdun.mp3" preload="auto" loop></audio>
+
+  <script>
+    // Dinamik mum oluşturma
+    const candlesContainer = document.getElementById('candles');
+    const NUM = 7;
+    for (let i=0;i<NUM;i++){
+      const c = document.createElement('div');
+      c.className = 'candle';
+      c.innerHTML = `
+        <div class="flame" role="img" aria-label="mum alevi">
+          <div class="outer"></div>
+          <div class="inner"></div>
+        </div>`;
+      c.addEventListener('click', ()=> extinguishFlame(c.querySelector('.flame')));
+      candlesContainer.appendChild(c);
+    }
+
+    function extinguishFlame(flame){
+      if(!flame) return;
+      if(flame.classList.contains('out')) return;
+      flame.classList.add('out');
+      updateStatus();
+      // küçük yıldız efekti
+      burstParticles(12);
+    }
+
+    function extinguishAll(){
+      document.querySelectorAll('.flame').forEach(f => f.classList.add('out'));
+      updateStatus();
+      burstParticles(40);
+    }
+
+    function areAllOut(){
+      return [...document.querySelectorAll('.flame')].every(f=>f.classList.contains('out'));
+    }
+
+    function updateStatus(){
+      const status = document.getElementById('status');
+      status.textContent = areAllOut()? 'Durum: Tüm mumlar söndü 🎉' : 'Durum: Mumlar açık';
+    }
+
+    // Müzik kontrolü
+    const song = document.getElementById('song');
+    const playBtn = document.getElementById('playBtn');
+    playBtn.addEventListener('click', async ()=>{
+      try{
+        if(song.paused){
+          await song.play();
+          playBtn.textContent = '⏸️ Müzik Duraklat';
+        } else {
+          song.pause();
+          playBtn.textContent = '🎵 Müzik Başlat / Duraklat';
+        }
+      }catch(e){
+        alert('Tarayıcı autoplay kısıtlaması nedeniyle müzik çalmadı. Lütfen sayfada bir kere tıklayın veya dosyanın doğru olduğundan emin olun.');
+      }
+    });
+
+    // Mikrofonla üfleme algılama
+    let micActive = false;
+    let audioCtx, analyser, dataArr, source;
+    const micBtn = document.getElementById('micBtn');
+
+    micBtn.addEventListener('click', async ()=>{
+      if(!micActive){
+        try{
+          const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          source = audioCtx.createMediaStreamSource(stream);
+          analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 2048;
+          source.connect(analyser);
+          dataArr = new Uint8Array(analyser.fftSize);
+          micActive = true;
+          micBtn.textContent = '🎤 Mikrofonla Üfle: Açık (tıklayarak kapat)';
+          monitorMic();
+        }catch(e){
+          alert('Mikrofon izni reddedildi veya desteklenmiyor.');
+        }
+      } else {
+        // kapat
+        if(source && source.mediaStream) {
+          const tracks = source.mediaStream.getTracks();
+          tracks.forEach(t=>t.stop());
+        }
+        if(audioCtx) audioCtx.close();
+        micActive = false;
+        micBtn.textContent = '🎤 Mikrofonla Üfle: Kapalı';
+      }
+    });
+
+    function monitorMic(){
+      if(!micActive) return;
+      analyser.getByteTimeDomainData(dataArr);
+      // RMS hesapla
+      let sum = 0;
+      for(let i=0;i<dataArr.length;i++){
+        const v = (dataArr[i]-128)/128;
+        sum += v*v;
+      }
+      const rms = Math.sqrt(sum/dataArr.length);
+      // Eşik: üfleme için rms > 0.12 (tarayıcı/mikrofonlara göre ayarlanabilir)
+      if(rms > 0.12){
+        extinguishAll();
+      }
+      requestAnimationFrame(monitorMic);
+    }
+
+    // Basit konfeti / parçacık patlaması
+    const confettiCanvas = document.getElementById('confetti');
+    const ctx = confettiCanvas.getContext('2d');
+    confettiCanvas.width = innerWidth;
+    confettiCanvas.height = innerHeight;
+    window.addEventListener('resize', ()=>{confettiCanvas.width = innerWidth; confettiCanvas.height = innerHeight});
+
+    let particles = [];
+    function burstParticles(count){
+      for(let i=0;i<count;i++){
+        particles.push({
+          x: innerWidth/2 + (Math.random()*200-100),
+          y: innerHeight/2 + (Math.random()*60-30),
+          vx: (Math.random()*6-3),
+          vy: (Math.random()*-6-2),
+          rot: Math.random()*360,
+          size: Math.random()*8+4,
+          life: 80 + Math.random()*40
+        });
+      }
+      if(!animating) animateParticles();
+    }
+
+    let animating = false;
+    function animateParticles(){
+      animating = true;
+      function frame(){
+        ctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+        for(let i=particles.length-1;i>=0;i--){
+          const p = particles[i];
+          p.x += p.vx; p.y += p.vy; p.vy += 0.18; p.rot += p.vx*2; p.life--;
+          ctx.save();
+          ctx.translate(p.x,p.y); ctx.rotate(p.rot* Math.PI/180);
+          ctx.fillStyle = `hsl(${(p.life*3)%360} 80% 60%)`;
+          ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size*0.6);
+          ctx.restore();
+          if(p.life<=0){particles.splice(i,1)}
+        }
+        if(particles.length>0) requestAnimationFrame(frame); else animating=false;
+      }
+      requestAnimationFrame(frame);
+    }
+
+    // Küçük yardımcı not: sayfa yüklendiğinde otomatik çalmaya tarayıcı izin vermez çoğu zaman.
+    // Kullanıcı bir butona tıklayınca çalar.
+
+    // Başlangıç güncellemesi
+    updateStatus();
+
+    // Hızlı erişim: boşluk ile de tüm mumları söndür
+    window.addEventListener('keydown', (e)=>{
+      if(e.code === 'Space') extinguishAll();
+    });
+
+    // Erişilebilirlik: mumlara keyboard ile eriş
+    document.addEventListener('keydown', (e)=>{
+      if(e.key >= '1' && e.key <= String(NUM)){
+        const idx = Number(e.key)-1;
+        const flame = document.querySelectorAll('.flame')[idx];
+        extinguishFlame(flame);
+      }
+    });
+
+  </script>
+</body>
+</html>
